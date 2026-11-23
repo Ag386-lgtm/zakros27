@@ -1,40 +1,42 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>موقعي الشخصي</title>
-    <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>تشريح جسم الإنسان ثلاثي الأبعاد</title>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-    <header>
-        <h1>مرحباً، أنا [اسمك]</h1>
-        <p>مطور ويب | مصمم | مبرمج</p>
-    </header>
+  <canvas id="scene"></canvas>
 
-    <section id="about">
-        <h2>عني</h2>
-        <p>أنا شخص مهتم بتطوير الويب وأحب تعلم الأشياء الجديدة.</p>
-    </section>
+  <aside id="panel">
+    <h1>تشريح جسم الإنسان</h1>
+    <p class="hint">انقر على أي عضو لعرض تفاصيله. اسحب للتدوير، عجلة الماوس للتكبير.</p>
 
-    <section id="skills">
-        <h2>مهاراتي</h2>
-        <ul>
-            <li>HTML & CSS</li>
-            <li>JavaScript</li>
-            <li>Python</li>
-        </ul>
-    </section>
+    <div class="tabs">
+      <button class="tab active" data-system="all">الكل</button>
+      <button class="tab" data-system="heart">القلب</button>
+      <button class="tab" data-system="digestive">الهضمي</button>
+      <button class="tab" data-system="skeleton">الهيكل</button>
+    </div>
 
-    <section id="contact">
-        <h2>تواصل معي</h2>
-        <p>البريد: example@email.com</p>
-    </section>
+    <div id="info">
+      <h2>لم تختر عضواً بعد</h2>
+      <p>انقر على أي جزء في المشهد.</p>
+    </div>
 
-    <footer>
-        <p>© 2026 جميع الحقوق محفوظة</p>
-    </footer>
+    <button id="reset">إعادة ضبط الكاميرا</button>
+    <ul id="parts-list"></ul>
+  </aside>
 
-    <script src="script.js"></script>
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+  <script type="module" src="main.js"></script>
 </body>
-  </html>
+</html>
