@@ -3,35 +3,25 @@ body { background: #050a14; color: #e0e6ed; overflow: hidden; }
 #scene { position: fixed; inset: 0; z-index: 1; }
 
 #panel {
-  position: fixed; top: 0; left: 0; width: 360px; height: 100vh;
+  position: fixed; top: 0; left: 0; width: 380px; height: 100vh;
   background: rgba(10, 17, 30, 0.95); border-left: 1px solid #1e2d45;
   padding: 20px; display: flex; flex-direction: column; gap: 15px; z-index: 10;
   overflow-y: auto; backdrop-filter: blur(10px);
 }
-h1 { font-size: 22px; color: #4db8ff; text-align: center; }
-.hint { font-size: 12px; color: #8a9bb5; text-align: center; }
+h1 { font-size: 22px; color: #ff6b81; text-align: center; }
+.hint { font-size: 13px; color: #8a9bb5; line-height: 1.6; text-align: center; }
 
-/* Accordion */
-.accordion { display: flex; flex-direction: column; gap: 8px; }
-.acc-item { border: 1px solid #1e2d45; border-radius: 8px; overflow: hidden; }
-.acc-header {
-  width: 100%; padding: 12px; background: #132135; color: #fff; text-align: right;
-  border: none; cursor: pointer; font-weight: bold; font-size: 14px; transition: 0.3s;
-}
-.acc-header:hover { background: #1c3254; }
-.acc-content {
-  display: none; flex-direction: column; padding: 10px; gap: 5px; background: #0a111e;
-}
-.acc-content.active { display: flex; }
-.acc-content button {
-  padding: 8px; background: transparent; border: 1px solid #1e2d45; color: #b8c7e0;
-  border-radius: 5px; cursor: pointer; text-align: right; font-size: 13px; transition: 0.2s;
-}
-.acc-content button:hover { background: #1c3254; color: #fff; }
+#info { background: #0d1625; border: 1px solid #1e2d45; border-radius: 10px; padding: 15px; min-height: 150px; }
+#info h2 { color: #4db8ff; font-size: 18px; margin-bottom: 10px; border-bottom: 1px solid #1e2d45; padding-bottom: 5px;}
+#info p { font-size: 14px; line-height: 1.8; color: #b8c7e0; }
 
-#info { background: #0d1625; border: 1px solid #1e2d45; border-radius: 10px; padding: 15px; margin-top: auto; }
-#info h2 { color: #ff6b81; font-size: 16px; margin-bottom: 8px; }
-#info p { font-size: 13px; line-height: 1.6; color: #b8c7e0; }
-
-#reset { padding: 12px; background: #1f8ef1; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
+#reset { padding: 12px; background: #1f8ef1; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.3s; }
 #reset:hover { background: #4db8ff; }
+
+h3 { font-size: 15px; color: #8a9bb5; margin-top: 10px; }
+#parts-list { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+#parts-list li {
+  padding: 10px; background: #0a111e; border: 1px solid #1e2d45;
+  border-radius: 8px; font-size: 14px; cursor: pointer; transition: 0.2s; text-align: right;
+}
+#parts-list li:hover { background: #1c3254; border-color: #4db8ff; color: #fff; }
