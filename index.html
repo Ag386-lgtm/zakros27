@@ -3,72 +3,25 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>أطلس التشريح ثلاثي الأبعاد (مستوحى من Netter)</title>
+  <title>تشريح القلب التفاعلي 3D</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <canvas id="scene"></canvas>
 
   <aside id="panel">
-    <h1>أطلس التشريح 3D</h1>
-    <p class="hint">انقر على أي جزء لعرض تفاصيله. اسحب للتدوير.</p>
-
-    <!-- قائمة الأقسام التشريحية -->
-    <div class="accordion">
-      
-      <div class="acc-item">
-        <button class="acc-header">1. الجهاز الهيكلي (Skeletal)</button>
-        <div class="acc-content">
-          <button data-part="skull">الجمجمة</button>
-          <button data-part="spine">العمود الفقري</button>
-          <button data-part="ribs">القفص الصدري</button>
-          <button data-part="pelvis">الحوض</button>
-        </div>
-      </div>
-
-      <div class="acc-item">
-        <button class="acc-header">2. الأحشاء الصدرية (Thorax)</button>
-        <div class="acc-content">
-          <button data-part="heart">القلب (الغرف الأربع)</button>
-          <button data-part="lungs">الرئتان</button>
-          <button data-part="aorta">الأبهر (Aorta)</button>
-        </div>
-      </div>
-
-      <div class="acc-item">
-        <button class="acc-header">3. الأحشاء البطنية (Abdomen)</button>
-        <div class="acc-content">
-          <button data-part="liver">الكبد</button>
-          <button data-part="stomach">المعدة</button>
-          <button data-part="kidneys">الكليتان</button>
-          <button data-part="intestines">الأمعاء</button>
-        </div>
-      </div>
-
-      <div class="acc-item">
-        <button class="acc-header">4. الأطراف العلوية (Upper Limb)</button>
-        <div class="acc-content">
-          <button data-part="humerus">عظم العضد</button>
-          <button data-part="radius_ulna">الكعبرة والزند</button>
-        </div>
-      </div>
-
-      <div class="acc-item">
-        <button class="acc-header">5. الأطراف السفلية (Lower Limb)</button>
-        <div class="acc-content">
-          <button data-part="femur">عظم الفخذ</button>
-          <button data-part="tibia">الظنبوب (الساق)</button>
-        </div>
-      </div>
-
-    </div>
+    <h1>تشريح القلب 3D</h1>
+    <p class="hint">انقر على أي جزء من القلب لعرض تفاصيله التشريحية. اسحب للتدوير، وعجلة الماوس للتكبير.</p>
 
     <div id="info">
-      <h2>لم تختر عضواً بعد</h2>
-      <p>اختر من القائمة أو انقر على المجسم.</p>
+      <h2>لم تختر جزءاً بعد</h2>
+      <p>اضغط على أي جزء من مجسم القلب في الشاشة لقراءة تفاصيله.</p>
     </div>
 
     <button id="reset">إعادة ضبط الكاميرا</button>
+    
+    <h3>قائمة الأجزاء:</h3>
+    <ul id="parts-list"></ul>
   </aside>
 
   <script type="importmap">
