@@ -3,30 +3,72 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>تشريح جسم الإنسان ثلاثي الأبعاد</title>
+  <title>أطلس التشريح ثلاثي الأبعاد (مستوحى من Netter)</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <canvas id="scene"></canvas>
 
   <aside id="panel">
-    <h1>تشريح جسم الإنسان</h1>
-    <p class="hint">انقر على أي عضو لعرض تفاصيله. اسحب للتدوير، عجلة الماوس للتكبير.</p>
+    <h1>أطلس التشريح 3D</h1>
+    <p class="hint">انقر على أي جزء لعرض تفاصيله. اسحب للتدوير.</p>
 
-    <div class="tabs">
-      <button class="tab active" data-system="all">الكل</button>
-      <button class="tab" data-system="heart">القلب</button>
-      <button class="tab" data-system="digestive">الهضمي</button>
-      <button class="tab" data-system="skeleton">الهيكل</button>
+    <!-- قائمة الأقسام التشريحية -->
+    <div class="accordion">
+      
+      <div class="acc-item">
+        <button class="acc-header">1. الجهاز الهيكلي (Skeletal)</button>
+        <div class="acc-content">
+          <button data-part="skull">الجمجمة</button>
+          <button data-part="spine">العمود الفقري</button>
+          <button data-part="ribs">القفص الصدري</button>
+          <button data-part="pelvis">الحوض</button>
+        </div>
+      </div>
+
+      <div class="acc-item">
+        <button class="acc-header">2. الأحشاء الصدرية (Thorax)</button>
+        <div class="acc-content">
+          <button data-part="heart">القلب (الغرف الأربع)</button>
+          <button data-part="lungs">الرئتان</button>
+          <button data-part="aorta">الأبهر (Aorta)</button>
+        </div>
+      </div>
+
+      <div class="acc-item">
+        <button class="acc-header">3. الأحشاء البطنية (Abdomen)</button>
+        <div class="acc-content">
+          <button data-part="liver">الكبد</button>
+          <button data-part="stomach">المعدة</button>
+          <button data-part="kidneys">الكليتان</button>
+          <button data-part="intestines">الأمعاء</button>
+        </div>
+      </div>
+
+      <div class="acc-item">
+        <button class="acc-header">4. الأطراف العلوية (Upper Limb)</button>
+        <div class="acc-content">
+          <button data-part="humerus">عظم العضد</button>
+          <button data-part="radius_ulna">الكعبرة والزند</button>
+        </div>
+      </div>
+
+      <div class="acc-item">
+        <button class="acc-header">5. الأطراف السفلية (Lower Limb)</button>
+        <div class="acc-content">
+          <button data-part="femur">عظم الفخذ</button>
+          <button data-part="tibia">الظنبوب (الساق)</button>
+        </div>
+      </div>
+
     </div>
 
     <div id="info">
       <h2>لم تختر عضواً بعد</h2>
-      <p>انقر على أي جزء في المشهد.</p>
+      <p>اختر من القائمة أو انقر على المجسم.</p>
     </div>
 
     <button id="reset">إعادة ضبط الكاميرا</button>
-    <ul id="parts-list"></ul>
   </aside>
 
   <script type="importmap">
