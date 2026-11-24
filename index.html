@@ -4,47 +4,380 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>حامي القلب - Heart Defender</title>
-<link rel="stylesheet" href="style.css">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, sans-serif; user-select: none; }
+  body { background: #050a14; color: #fff; overflow: hidden; height: 100vh; display: flex; justify-content: center; align-items: center; }
+  
+  /* لوحة اللعبة */
+  #game-area { position: relative; width: 100vw; height: 100vh; overflow: hidden; }
+  canvas { display: block; width: 100%; height: 100%; cursor: crosshair; }
+
+  /* واجهة المستخدم */
+  .hud { position: absolute; top: 20px; left: 20px; right: 20px; display: flex; justify-content: space-between; z-index: 10; pointer-events: none; }
+  .box { background: rgba(0,0,0,0.7); padding: 12px 24px; border-radius: 12px; font-size: 22px; font-weight: bold; border: 1px solid #1e3a5f; }
+  .score-text { color: #2ecc71; }
+  .level-text { color: #f1c40f; font-size: 16px; margin-right: 15px; }
+  .lives-text { color: #e74c3c; font-size: 26px; letter-spacing: 5px; }
+
+  /* الشاشات المنبثقة */
+  .overlay { position: absolute; inset: 0; background: rgba(5, 10, 20, 0.95); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 50; text-align: center; transition: opacity 0.3s; }
+  .overlay.hidden { display: none; opacity: 0; }
+  .overlay h1 { font-size: 50px; margin-bottom: 20px; text-shadow: 0 0 30px rgba(255,255,255,0.2); }
+  .overlay p { font-size: 18px; color: #aaa; margin-bottom: 30px; max-width: 500px; line-height: 1.8; }
+  .overlay button { padding: 18px 60px; font-size: 24px; font-weight: bold; background: #2ecc71; color: #000; border: none; border-radius: 50px; cursor: pointer; transition: 0.3s; box-shadow: 0 0 20px rgba(46, 204, 113, 0.4); }
+  .overlay button:hover { transform: scale(1.05); background: #27ae60; }
+  .overlay button:active { transform: scale(0.95); }
+  
+  /* النهاية */
+  #end-screen h1 { color: #e74c3c; }
+  #end-screen button { background: #3498db; color: #fff; }
+  #final-score { color: #2ecc71; font-size: 30px; font-weight: bold; }
+
+  /* تأثير الضرر */
+  #damage-flash { position: absolute; inset: 0; background: rgba(231, 76, 60, 0.5); opacity: 0; pointer-events: none; z-index: 20; transition: opacity 0.15s; }
+</style>
 </head>
 <body>
 
-<!-- شاشة التحميل -->
-<div id="loading" class="overlay">
-  <h1>جاري التحميل...</h1>
-</div>
+<div id="game-area">
+  <canvas id="canvas"></canvas>
+  <div id="damage-flash"></div>
 
-<!-- شاشة البداية -->
-<div id="start-screen" class="overlay hidden">
-  <h1 style="color: #2ecc71;">حامي القلب 🛡️</h1>
-  <p>القلب في خطر! جراثيم تطير من حوله وتحاول اختراقه. انقر عليها بسرعة لتدميرها قبل أن تصل. إذا وصلت إلى 200 نقطة، تفوز!</p>
-  <button id="start-btn">ابدأ المهمة</button>
-</div>
-
-<!-- شاشة النهاية -->
-<div id="end-screen" class="overlay hidden">
-  <h1 id="end-title">انتهت اللعبة</h1>
-  <p id="end-message"></p>
-  <p>نقاطك النهائية: <span id="final-score">0</span></p>
-  <button id="restart-btn">العب مرة أخرى</button>
-</div>
-
-<!-- واجهة اللعب (النقاط والأرواح) -->
-<div class="hud">
-  <div class="box">
-    النقاط: <span id="score">0</span>
-    <span class="level">المستوى: <span id="level">1</span></span>
+  <!-- واجهة اللعب -->
+  <div class="hud">
+    <div class="box">
+      النقاط: <span id="score" class="score-text">0</span>
+      <span class="level-text">المستوى: <span id="level">1</span></span>
+    </div>
+    <div class="box lives-text" id="lives-display">❤️❤️❤️</div>
   </div>
-  <div class="box lives" id="lives-display">❤️❤️❤️</div>
+
+  <!-- شاشة البداية -->
+  <div id="start-screen" class="overlay">
+    <h1 style="color: #2ecc71;">حامي القلب 🛡️</h1>
+    <p>القلب في خطر! جراثيم تطير من حوله وتحاول اختراقه. انقر عليها بسرعة لتدميرها قبل أن تصل. إذا وصلت إلى 200 نقطة، تفوز!</p>
+    <button id="start-btn">ابدأ المهمة</button>
+  </div>
+
+  <!-- شاشة النهاية -->
+  <div id="end-screen" class="overlay hidden">
+    <h1 id="end-title">انتهت اللعبة</h1>
+    <p id="end-message"></p>
+    <p>نقاطك النهائية: <span id="final-score">0</span></p>
+    <button id="restart-btn">العب مرة أخرى</button>
+  </div>
 </div>
 
-<!-- تأثير الضرر -->
-<div id="damage-flash"></div>
+<script>
+// ==================== إعداد اللوحة ====================
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+let W, H;
 
-<!-- حاوية اللعبة ثلاثية الأبعاد -->
-<div id="game-container"></div>
+function resize() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+}
+window.addEventListener('resize', resize);
+resize();
 
-<!-- تحميل السكريبتات بالترتيب -->
-<script src="three.min.js"></script>
-<script src="game.js"></script>
+// ==================== متغيرات اللعبة ====================
+let score = 0, lives = 3, level = 1, isPlaying = false;
+const WIN_SCORE = 200;
+
+let enemies = [];
+let particles = [];
+let spawnTimer = 0;
+let lastTime = 0;
+let gameSpeedMultiplier = 1;
+
+const scoreEl = document.getElementById('score');
+const levelEl = document.getElementById('level');
+const livesDisplay = document.getElementById('lives-display');
+const startScreen = document.getElementById('start-screen');
+const endScreen = document.getElementById('end-screen');
+const endTitle = document.getElementById('end-title');
+const endMessage = document.getElementById('end-message');
+const finalScoreEl = document.getElementById('final-score');
+const damageFlash = document.getElementById('damage-flash');
+
+// ==================== دوال مساعدة ====================
+function updateLives() {
+  livesDisplay.innerHTML = '❤️'.repeat(lives) + '🖤'.repeat(3 - lives);
+}
+
+function triggerDamageFlash() {
+  damageFlash.style.opacity = '1';
+  setTimeout(() => damageFlash.style.opacity = '0', 150);
+}
+
+// ==================== كائنات اللعبة ====================
+function spawnEnemy() {
+  const angle = Math.random() * Math.PI * 2;
+  const radius = Math.max(W, H) * 0.6; // يبدأ من خارج الشاشة
+  const speed = (1.5 + Math.random() * 1.5) * gameSpeedMultiplier;
+  
+  enemies.push({
+    x: W/2 + Math.cos(angle) * radius,
+    y: H/2 + Math.sin(angle) * radius,
+    radius: 15 + Math.random() * 10,
+    speed: speed,
+    active: true,
+    pulse: Math.random() * Math.PI * 2,
+    color: `hsl(${120 + Math.random() * 40}, 70%, 50%)`
+  });
+}
+
+function createExplosion(x, y, color) {
+  for (let i = 0; i < 12; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 2 + Math.random() * 4;
+    particles.push({
+      x: x, y: y,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      life: 1.0,
+      color: color,
+      size: 3 + Math.random() * 3
+    });
+  }
+}
+
+// ==================== الرسم ====================
+function drawHeart(time) {
+  const cx = W/2, cy = H/2;
+  const pulse = 1 + Math.sin(time * 0.005) * 0.08; // نبض
+  const baseSize = Math.min(W, H) * 0.12 * pulse;
+  
+  // هالة
+  const gradient = ctx.createRadialGradient(cx, cy, baseSize * 0.5, cx, cy, baseSize * 3);
+  gradient.addColorStop(0, 'rgba(255, 50, 50, 0.15)');
+  gradient.addColorStop(1, 'rgba(255, 50, 50, 0)');
+  ctx.fillStyle = gradient;
+  ctx.beginPath();
+  ctx.arc(cx, cy, baseSize * 3, 0, Math.PI * 2);
+  ctx.fill();
+
+  // رسم شكل القلب
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.scale(baseSize / 100, baseSize / 100);
+  
+  ctx.beginPath();
+  ctx.moveTo(0, 30);
+  ctx.bezierCurveTo(-50, -20, -100, 20, 0, 100);
+  ctx.bezierCurveTo(100, 20, 50, -20, 0, 30);
+  ctx.closePath();
+  
+  // تدرج لوني للقلب
+  const heartGrad = ctx.createRadialGradient(-20, -10, 10, 0, 20, 80);
+  heartGrad.addColorStop(0, '#ff6b6b');
+  heartGrad.addColorStop(1, '#c0392b');
+  ctx.fillStyle = heartGrad;
+  ctx.fill();
+  
+  // لمعة
+  ctx.beginPath();
+  ctx.ellipse(-25, 0, 12, 18, -0.5, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+  ctx.fill();
+  
+  ctx.restore();
+}
+
+function drawEnemies() {
+  enemies.forEach(e => {
+    if (!e.active) return;
+    const currentRadius = e.radius * (1 + Math.sin(e.pulse) * 0.15);
+    
+    // توهج
+    const grad = ctx.createRadialGradient(e.x, e.y, 0, e.x, e.y, currentRadius * 2);
+    grad.addColorStop(0, e.color);
+    grad.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(e.x, e.y, currentRadius * 2, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // الجسم
+    ctx.beginPath();
+    ctx.arc(e.x, e.y, currentRadius, 0, Math.PI * 2);
+    ctx.fillStyle = e.color;
+    ctx.fill();
+    
+    // نواة
+    ctx.beginPath();
+    ctx.arc(e.x - currentRadius*0.2, e.y - currentRadius*0.2, currentRadius*0.4, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255,255,255,0.6)';
+    ctx.fill();
+  });
+}
+
+function drawParticles() {
+  particles.forEach(p => {
+    ctx.globalAlpha = p.life;
+    ctx.fillStyle = p.color;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+    ctx.fill();
+  });
+  ctx.globalAlpha = 1;
+}
+
+// ==================== حلقة اللعبة ====================
+function gameLoop(time) {
+  const delta = Math.min((time - lastTime) / 16.67, 3); // للتحكم بالسرعة
+  lastTime = time;
+
+  // مسح الشاشة
+  ctx.fillStyle = '#050a14';
+  ctx.fillRect(0, 0, W, H);
+
+  // رسم الخلفية (نجوم)
+  ctx.fillStyle = 'rgba(255,255,255,0.3)';
+  for (let i = 0; i < 50; i++) {
+    const x = (i * 137.5 + time * 0.01) % W;
+    const y = (i * 73.3) % H;
+    ctx.fillRect(x, y, 1.5, 1.5);
+  }
+
+  // رسم القلب
+  drawHeart(time);
+
+  if (isPlaying) {
+    // توليد جراثيم
+    spawnTimer += delta;
+    const spawnRate = Math.max(20, 60 - level * 5);
+    if (spawnTimer > spawnRate) {
+      spawnEnemy();
+      spawnTimer = 0;
+    }
+
+    // تحديث الجراثيم
+    const cx = W/2, cy = H/2;
+    for (let i = enemies.length - 1; i >= 0; i--) {
+      const e = enemies[i];
+      if (!e.active) continue;
+      
+      // التحرك نحو المركز
+      const dx = cx - e.x, dy = cy - e.y;
+      const dist = Math.sqrt(dx*dx + dy*dy);
+      if (dist > 0) {
+        e.x += (dx / dist) * e.speed * delta;
+        e.y += (dy / dist) * e.speed * delta;
+      }
+      
+      // نبض
+      e.pulse += 0.1 * delta;
+
+      // اصطدام بالقلب
+      if (dist < Math.min(W, H) * 0.12) {
+        lives--;
+        updateLives();
+        triggerDamageFlash();
+        createExplosion(e.x, e.y, '#ff4444');
+        enemies.splice(i, 1);
+        
+        if (lives <= 0) {
+          endGame(false);
+        }
+      }
+    }
+  }
+
+  drawEnemies();
+  drawParticles();
+
+  // تحديث الجسيمات
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.x += p.vx * delta;
+    p.y += p.vy * delta;
+    p.vx *= 0.95;
+    p.vy *= 0.95;
+    p.life -= 0.03 * delta;
+    if (p.life <= 0) particles.splice(i, 1);
+  }
+
+  requestAnimationFrame(gameLoop);
+}
+
+// ==================== التحكم ====================
+canvas.addEventListener('pointerdown', (e) => {
+  if (!isPlaying) return;
+  
+  const rect = canvas.getBoundingClientRect();
+  const clickX = e.clientX - rect.left;
+  const clickY = e.clientY - rect.top;
+
+  // البحث عن جرثومة تم النقر عليها
+  for (let i = enemies.length - 1; i >= 0; i--) {
+    const en = enemies[i];
+    if (!en.active) continue;
+    const dx = clickX - en.x;
+    const dy = clickY - en.y;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    
+    // مساحة النقر أوسع من الجرثومة (لتسهيل اللعب)
+    if (dist < en.radius * 2) {
+      createExplosion(en.x, en.y, en.color);
+      enemies.splice(i, 1);
+      
+      score += 10;
+      scoreEl.textContent = score;
+      
+      // ترقية المستوى
+      const newLevel = Math.floor(score / 50) + 1;
+      if (newLevel > level) {
+        level = newLevel;
+        levelEl.textContent = level;
+        gameSpeedMultiplier += 0.2;
+      }
+      
+      if (score >= WIN_SCORE) {
+        endGame(true);
+      }
+      return;
+    }
+  }
+});
+
+// ==================== بدء وإنهاء اللعبة ====================
+function startGame() {
+  score = 0; lives = 3; level = 1; gameSpeedMultiplier = 1;
+  enemies = []; particles = []; spawnTimer = 0;
+  isPlaying = true;
+  
+  scoreEl.textContent = score;
+  levelEl.textContent = level;
+  updateLives();
+  
+  startScreen.classList.add('hidden');
+  endScreen.classList.add('hidden');
+}
+
+function endGame(win) {
+  isPlaying = false;
+  finalScoreEl.textContent = score;
+  
+  if (win) {
+    endTitle.textContent = "أنقذت القلب! 🎉";
+    endTitle.style.color = "#2ecc71";
+    endMessage.textContent = "لقد حميت القلب بنجاح من الجراثيم!";
+  } else {
+    endTitle.textContent = "انتهت اللعبة 💔";
+    endTitle.style.color = "#e74c3c";
+    endMessage.textContent = "وصلت الجراثيم إلى القلب. حاول مجدداً!";
+  }
+  endScreen.classList.remove('hidden');
+}
+
+// ==================== التشغيل ====================
+document.getElementById('start-btn').addEventListener('click', startGame);
+document.getElementById('restart-btn').addEventListener('click', startGame);
+
+// بدء حلقة الرسم فوراً
+requestAnimationFrame(gameLoop);
+</script>
 </body>
 </html>
