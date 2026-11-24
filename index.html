@@ -1,405 +1,280 @@
+
 <!doctype html>
-<html lang="ar">
+<html lang="ar" dir="rtl">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Interactive 3D Heart - Atlas</title>
+<title>اقض على الجراثيم</title>
 <style>
-*{box-sizing:border-box}
-body{margin:0;background:radial-gradient(ellipse at 45% 45%,#102d51,#030c1b 72%);color:#eef7ff;font-family:Arial,sans-serif;overflow:hidden}
-.top{position:absolute;top:16px;left:16px;z-index:2;background:#07172bdc;border:1px solid #1676c5;border-radius:16px;padding:12px 18px}
-.top h1{font-size:18px;margin:0 0 5px}
-.top small{color:#9ed9ff}
-.panel{position:absolute;right:14px;top:15px;width:min(320px,43vw);z-index:2;background:#06172ae8;border:1px solid #1477b9;border-radius:16px;padding:15px;box-shadow:0 0 24px #0088ff22}
-.panel h2{margin:0 0 9px;font-size:17px;color:#4db8ff}
-.panel p{line-height:1.6;color:#d6eaff;font-size:13px}
-.controls{position:absolute;left:16px;top:42%;z-index:2;display:grid;gap:8px}
-.controls button,.bottom button{border:1px solid #1685ce;background:#092344;color:#ecf8ff;border-radius:11px;padding:10px 13px;cursor:pointer;transition:0.2s}
-.controls button:hover,.bottom button:hover{background:#0e4273}
-.bottom{position:absolute;bottom:18px;left:50%;transform:translateX(-50%);z-index:2;display:flex;gap:6px;flex-wrap:wrap;justify-content:center;max-width:90vw}
-.bottom button{font-size:12px;padding:8px 10px}
-.hint{position:absolute;bottom:76px;left:50%;transform:translateX(-50%);color:#a6d9ff;font-size:13px;z-index:2;text-align:center}
-canvas{display:block}
-.mobile .panel{top:auto;bottom:88px;right:10px;width:45vw;max-height:35vh;overflow:auto}
-.mobile .controls{top:30%;left:8px}
-.mobile .top{top:8px;left:8px;padding:8px 11px}
-.mobile .top h1{font-size:15px}
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, sans-serif; user-select: none; }
+  body { background: #050a14; color: #fff; overflow: hidden; }
+  canvas { display: block; position: fixed; inset: 0; }
+
+  /* واجهة المستخدم */
+  .hud { position: fixed; top: 20px; left: 20px; right: 20px; display: flex; justify-content: space-between; z-index: 10; pointer-events: none; }
+  .box { background: rgba(0,0,0,0.6); padding: 10px 20px; border-radius: 12px; font-size: 20px; font-weight: bold; border: 1px solid #333; }
+  .score { color: #2ecc71; }
+  .lives { color: #e74c3c; font-size: 24px; letter-spacing: 3px; }
+
+  /* شاشات البداية والنهاية */
+  .overlay { position: fixed; inset: 0; background: rgba(5, 10, 20, 0.95); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 50; text-align: center; }
+  .overlay.hidden { display: none; }
+  .overlay h1 { font-size: 45px; color: #2ecc71; margin-bottom: 20px; text-shadow: 0 0 20px rgba(46, 204, 113, 0.5); }
+  .overlay p { font-size: 18px; color: #aaa; margin-bottom: 30px; max-width: 400px; line-height: 1.6; }
+  .overlay button { padding: 15px 50px; font-size: 22px; font-weight: bold; background: #2ecc71; color: #000; border: none; border-radius: 50px; cursor: pointer; transition: 0.2s; }
+  .overlay button:hover { transform: scale(1.1); background: #27ae60; }
+
+  /* تأثير الضرر */
+  .damage-flash { position: fixed; inset: 0; background: rgba(231, 76, 60, 0.4); opacity: 0; pointer-events: none; z-index: 20; transition: opacity 0.1s; }
 </style>
 </head>
 <body>
-<div class="top">
-  <h1>🫀 Human Heart · القلب</h1>
-  <small>Interactive 3D Anatomy • أطلس تفاعلي</small>
+
+<div class="hud">
+  <div class="box score">النقاط: <span id="score">0</span></div>
+  <div class="box lives">❤️ <span id="lives">3</span></div>
 </div>
 
-<div class="controls">
-  <button id="rotate">⟳ دوران تلقائي</button>
-  <button id="reset">↺ إعادة ضبط</button>
+<div id="damage-flash" class="damage-flash"></div>
+
+<div id="start-screen" class="overlay">
+  <h1>اقض على الجراثيم! 🦠</h1>
+  <p>القلب في خطر! جراثيم تطير من حوله. انقر عليها بسرعة لتدميرها قبل أن تصل إلى القلب. لديك 3 محاولات فقط!</p>
+  <button id="start-btn">ابدأ اللعب</button>
 </div>
 
-<div class="panel">
-  <h2 id="partName">Heart · القلب</h2>
-  <p id="desc">اسحب للتدوير • عجلة الماوس للتقريب • انقر على أي جزء لعرض تفاصيله التشريحية.</p>
-</div>
-
-<div class="hint">اسحب للتدوير • Pinch/Scroll للتقريب • انقر على الأجزاء</div>
-
-<div class="bottom">
-  <button data-part="rv">البطين الأيمن</button>
-  <button data-part="lv">البطين الأيسر</button>
-  <button data-part="ra">الأذين الأيمن</button>
-  <button data-part="la">الأذين الأيسر</button>
-  <button data-part="valves">الصمامات</button>
-  <button data-part="aorta">الأبهر</button>
-  <button data-part="pulmonary">الجذع الرئوي</button>
-  <button data-part="coronary">الشرايين التاجية</button>
+<div id="end-screen" class="overlay hidden">
+  <h1 id="end-title">انتهت اللعبة</h1>
+  <p>نقاطك النهائية: <span id="final-score" style="color:#2ecc71; font-size: 24px; font-weight:bold;">0</span></p>
+  <button id="restart-btn">العب مرة أخرى</button>
 </div>
 
 <script type="module">
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
-import {OrbitControls} from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/controls/OrbitControls.js';
+import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/controls/OrbitControls.js';
 
-// ============ إعداد المشهد ============
+// ==================== إعداد المشهد ====================
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x041126);
-scene.fog = new THREE.Fog(0x041126, 12, 30);
+scene.background = new THREE.Color(0x050a14);
+scene.fog = new THREE.Fog(0x050a14, 10, 30);
 
-const camera = new THREE.PerspectiveCamera(38, innerWidth/innerHeight, .1, 100);
-camera.position.set(0, 1.1, 8.5);
+const camera = new THREE.PerspectiveCamera(50, innerWidth / innerHeight, 0.1, 100);
+camera.position.set(0, 0, 10);
 
-const renderer = new THREE.WebGLRenderer({antialias:true, alpha:false});
-renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(innerWidth, innerHeight);
-renderer.outputColorSpace = THREE.SRGBColorSpace;
-renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.25;
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 document.body.appendChild(renderer.domElement);
 
-const controls = new OrbitControls(camera, renderer.domElement);
-controls.enableDamping = true;
-controls.dampingFactor = .07;
-controls.minDistance = 3.1;
-controls.maxDistance = 15;
-controls.target.set(0, 0, 0);
+// إضاءة
+scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+const pointLight = new THREE.PointLight(0xffffff, 1.5, 20);
+pointLight.position.set(0, 0, 5);
+scene.add(pointLight);
 
-// ============ إضاءة ============
-scene.add(new THREE.HemisphereLight(0xb9dcff, 0x321019, 2.0));
-const key = new THREE.DirectionalLight(0xffd5c4, 3.4);
-key.position.set(4, 5, 6);
-scene.add(key);
-const rim = new THREE.PointLight(0x187dff, 35, 14);
-rim.position.set(-3, 1, -2);
-scene.add(rim);
+// ==================== بناء القلب (مجسم مركزي) ====================
+const heartGroup = new THREE.Group();
+const heartMat = new THREE.MeshStandardMaterial({ color: 0xc0392b, roughness: 0.3, metalness: 0.2, emissive: 0x220000 });
+const heartGeo = new THREE.SphereGeometry(1.5, 32, 32);
+const heartMesh = new THREE.Mesh(heartGeo, heartMat);
+heartMesh.scale.set(1, 1.2, 0.9);
+heartGroup.add(heartMesh);
+scene.add(heartGroup);
 
-// ============ المواد ============
-const heart = new THREE.Group();
-scene.add(heart);
+// هالة حول القلب
+const halo = new THREE.Mesh(
+  new THREE.SphereGeometry(1.7, 32, 32),
+  new THREE.MeshBasicMaterial({ color: 0xff0000, transparent: true, opacity: 0.05, side: THREE.BackSide })
+);
+heartGroup.add(halo);
 
-function material(color, rough=.45, metal=.08) {
-  return new THREE.MeshStandardMaterial({color, roughness:rough, metalness:metal});
-}
+// ==================== الجراثيم ====================
+const enemies = [];
+const enemyGeo = new THREE.SphereGeometry(0.35, 16, 16);
+const enemyMat = new THREE.MeshStandardMaterial({ color: 0x2ecc71, emissive: 0x115522, roughness: 0.2 });
 
-const matLV = material(0xb02636);      // البطين الأيسر (أحمر غامق)
-const matRV = material(0x3a6ab0);      // البطين الأيمن (أزرق)
-const matLA = material(0xd97a8a);      // الأذين الأيسر (وردي)
-const matRA = material(0x5a8ad0);      // الأذين الأيمن (أزرق فاتح)
-const matSeptum = material(0x8e6e53); // الحاجز
-const matValve = material(0xf1c40f);   // الصمامات (ذهبي)
-const matAorta = material(0xc0392b);   // الأبهر
-const matPulm = material(0x2980b9);    // الشريان الرئوي
-const matVC = material(0x4a6fa5);      // الأوردة الأجوف
-const matCoronary = material(0xff2d2d);// الشرايين التاجية
-const matPV = material(0x6b2d3e);      // الأوردة الرئوية
-
-// ============ أدوات البناء ============
-function ell(name, pos, scale, mat, userData) {
-  let m = new THREE.Mesh(new THREE.SphereGeometry(1, 36, 28), mat);
-  m.name = name;
-  m.position.set(...pos);
-  m.scale.set(...scale);
-  m.userData = userData;
-  heart.add(m);
-  clickable.push(m);
-  return m;
-}
-
-function tube(name, pts, r, mat, userData) {
-  let curve = new THREE.CatmullRomCurve3(pts.map(p => new THREE.Vector3(...p)));
-  let m = new THREE.Mesh(new THREE.TubeGeometry(curve, 64, r, 12, false), mat);
-  m.name = name;
-  m.userData = userData;
-  heart.add(m);
-  clickable.push(m);
-  return m;
-}
-
-function ring(name, pos, rot, scale, mat, userData) {
-  let m = new THREE.Mesh(new THREE.TorusGeometry(1, 0.18, 16, 48), mat);
-  m.name = name;
-  m.position.set(...pos);
-  m.rotation.set(...rot);
-  m.scale.set(...scale);
-  m.userData = userData;
-  heart.add(m);
-  clickable.push(m);
-  return m;
-}
-
-const clickable = [];
-
-// ============ بناء القلب التشريحي ============
-
-// --- الغرف الأربع ---
-ell('Right Ventricle', [0.15, -0.52, 0.12], [0.78, 1.02, 0.52], matRV, {
-  id: 'rv',
-  name: 'البطين الأيمن (Right Ventricle)',
-  desc: 'يقع في الجهة اليمنى والأمامية. يستقبل الدم غير المؤكسج من الأذين الأيمن ويضخه إلى الرئتين عبر الشريان الرئوي. جداره أرق (3-5 ملم) لأن ضغط الرئتين منخفض. يحتوي على عضلات حليمية (Papillary muscles) وحبال وترية (Chordae tendineae).'
-});
-
-ell('Left Ventricle', [0.52, -0.38, 0.18], [0.68, 1.14, 0.48], matLV, {
-  id: 'lv',
-  name: 'البطين الأيسر (Left Ventricle)',
-  desc: 'يقع في الجهة اليسرى والخلفية. جداره سميك جداً (10-15 ملم) لضخ الدم المؤكسج إلى جميع أنحاء الجسم عبر الشريان الأبهر. يشكل قمة القلب (Apex). سماكة جداره 3 أضعاف جدار البطين الأيمن. يحتوي على 2 عضلة حليمية فقط (بينما الأيمن له 3).'
-});
-
-ell('Right Atrium', [-0.58, 0.37, 0.17], [0.58, 0.66, 0.48], matRA, {
-  id: 'ra',
-  name: 'الأذين الأيمن (Right Atrium)',
-  desc: 'يستقبل الدم غير المؤكسج من الجسم عبر الوريد الأجوف العلوي (SVC) والسفلي (IVC)، والجيب التاجي (Coronary sinus). يحتوي على العقدة الجيبية (SA Node) - منظم ضربات القلب الطبيعي. حجمه حوالي 57 ملم.'
-});
-
-ell('Left Atrium', [0.48, 0.43, 0.15], [0.52, 0.56, 0.4], matLA, {
-  id: 'la',
-  name: 'الأذين الأيسر (Left Atrium)',
-  desc: 'يستقبل الدم المؤكسج من الرئتين عبر 4 أوردة رئوية، ويدفعه إلى البطين الأيسر عبر الصمام التاجي. يقع في الجزء العلوي والخلفي. تضخمه (Left Atrial Enlargement) شائع في الرجفان الأذيني وارتفاع ضغط الدم.'
-});
-
-// --- الحاجز ---
-ring('Interventricular Septum', [-0.05, -0.3, 0.15], [0, 0, 0], [0.12, 1.2, 0.85], matSeptum, {
-  id: 'septum',
-  name: 'الحاجز بين البطينين (Interventricular Septum)',
-  desc: 'جدار عضلي يفصل بين البطينين. يمنع اختلاط الدم المؤكسج بالدم غير المؤكسج. يتكون من جزء عضلي (Muscular) وجزء غشائي (Membranous). ثقبه الخلقي يسبب "عيب الحاجز البطيني" (VSD) - أكثر عيوب القلب الخلقية شيوعاً. يحتوي على حزمة هيس (Bundle of His) التي تنقل النبضات الكهربائية.'
-});
-
-// --- الصمامات الأربعة ---
-ring('Mitral Valve', [-0.6, 0.05, 0.15], [Math.PI/2, 0, 0], [0.35, 0.35, 0.35], matValve, {
-  id: 'valves',
-  name: 'الصمام التاجي / ثنائي الشرف (Mitral Valve)',
-  desc: 'بين الأذين الأيسر والبطين الأيسر. يتكون من شرفتين فقط (Anterior & Posterior). يمنع ارتجاع الدم إلى الأذين عند انقباض البطين. يُسمى أيضاً Bicuspid. تدلي الصمام التاجي (MVP) حالة شائعة تصيب 2-3% من الناس.'
-});
-
-ring('Tricuspid Valve', [0.55, 0.05, 0.15], [Math.PI/2, 0, 0], [0.38, 0.38, 0.38], matValve, {
-  id: 'valves',
-  name: 'الصمام ثلاثي الشرفات (Tricuspid Valve)',
-  desc: 'بين الأذين الأيمن والبطين الأيمن. يتكون من 3 شرفات (Anterior, Posterior, Septal). يمنع ارتجاع الدم إلى الأذين الأيمن. قصوره (Tricuspid Regurgitation) قد يحدث بسبب تمدد البطين الأيمن.'
-});
-
-ring('Aortic Valve', [-0.25, 0.65, -0.05], [Math.PI/2, 0, 0], [0.22, 0.22, 0.22], matValve, {
-  id: 'valves',
-  name: 'الصمام الأبهر (Aortic Valve)',
-  desc: 'بين البطين الأيسر والشريان الأبهر. يتكون من 3 شرفات هلالية (Semilunar cusps). يمنع رجوع الدم من الأبهر إلى البطين الأيسر. تضيقه (Aortic Stenosis) يسبب إجهاداً شديداً للبطين الأيسر.'
-});
-
-ring('Pulmonary Valve', [0.35, 0.55, 0.35], [Math.PI/2, 0, 0.3], [0.22, 0.22, 0.22], matPulm, {
-  id: 'valves',
-  name: 'الصمام الرئوي (Pulmonary Valve)',
-  desc: 'بين البطين الأيمن والشريان الرئوي. يتكون من 3 شرفات هلالية. يمنع رجوع الدم من الشريان الرئوي إلى البطين الأيمن. تضيقه الخلقي (Pulmonary Stenosis) شائع في عيوب القلب الخلقية مثل رباعية فالو.'
-});
-
-// --- الأوعية الكبرى ---
-tube('Aorta', [[-0.03, 0.5, 0.1], [-0.02, 0.83, 0.06], [0.13, 1.25, 0.02], [0.38, 1.42, 0], [0.68, 1.36, 0], [0.9, 1.17, 0]], .17, matAorta, {
-  id: 'aorta',
-  name: 'الشريان الأبهر (Aorta)',
-  desc: 'أكبر شريان في الجسم (قطره 2.5-3.5 سم). يخرج من البطين الأيسر عبر الصمام الأبهر. له 3 أجزاء: الصاعد (Ascending)، القوس (Arch) الذي يعطي 3 فروع (Brachiocephalic, Carotid, Subclavian)، والنازل (Descending). يوزع الدم المؤكسج على كل الجسم. تمدد الأبهر (Aortic Aneurysm) حالة خطيرة قد تؤدي للانفجار.'
-});
-
-tube('Aortic Arch Branches', [[0.28, 1.36, 0], [0.24, 1.7, 0], [0.22, 1.87, 0]], .08, matAorta, {
-  id: 'aorta',
-  name: 'فروع قوس الأبهر',
-  desc: 'ثلاثة فروع: الشريان العضدي الرأسي (Brachiocephalic) الذي يتفرع للسباتي الأيمن والتحت الترقوي الأيمن، الشريان السباتي الأيسر (Left Common Carotid)، والشريان تحت الترقوي الأيسر (Left Subclavian).'
-});
-
-tube('Pulmonary Trunk', [[-0.3, 0.4, 0.18], [-0.42, 0.72, 0.18], [-0.55, 1.02, 0.18], [-0.9, 1.08, 0.18], [-1.1, 0.96, 0.18]], .16, matPulm, {
-  id: 'pulmonary',
-  name: 'الجذع الرئوي (Pulmonary Trunk)',
-  desc: 'ينقل الدم غير المؤكسج من البطين الأيمن إلى الرئتين. ينقسم إلى شريان رئوي أيمن وأيسر. هو الشريان الوحيد في الجسم الذي يحمل دماً غير مؤكسج. يقع أمام الأبهر الصاعد.'
-});
-
-tube('Superior Vena Cava', [[-0.72, 1.47, 0.05], [-0.72, 1.1, 0.05], [-0.7, 0.68, 0.05], [-0.63, 0.38, 0.05]], .19, matVC, {
-  id: 'svc',
-  name: 'الوريد الأجوف العلوي (Superior Vena Cava)',
-  desc: 'يجمع الدم غير المؤكسج من الرأس والرقبة والذراعين (عبر الأوردة العضدية الرأسية). قطره حوالي 2 سم. يصب في الأذين الأيمن. انسداده يسبب متلازمة الوريد الأجوف العلوي (SVCS).'
-});
-
-tube('Inferior Vena Cava', [[-0.75, -0.98, 0.04], [-0.68, -0.55, 0.05], [-0.65, -0.1, 0.05], [-0.64, 0.36, 0.05]], .16, matVC, {
-  id: 'ivc',
-  name: 'الوريد الأجوف السفلي (Inferior Vena Cava)',
-  desc: 'أكبر وريد في الجسم (قطره 2-3 سم). يجمع الدم غير المؤكسج من البطن والحوض والأطراف السفلية. يمر خلف الكبد (يصله الوريد الكبدي) ويصب في الأذين الأيمن. يحتوي على صمامات أصلية (Eustachian valve).'
-});
-
-// --- الأوردة الرئوية الأربعة ---
-tube('Right Superior Pulmonary Vein', [[0.68, 0.55, -0.05], [0.9, 0.55, -0.1], [1.05, 0.5, -0.12]], .09, matPV, {
-  id: 'pv',
-  name: 'الوريد الرئوي الأيمن العلوي',
-  desc: 'يحمل الدم المؤكسج من الفص العلوي الأيمن للرئة إلى الأذين الأيسر. واحد من 4 أوردة رئوية (اثنان يمين، اثنان يسار).'
-});
-
-tube('Right Inferior Pulmonary Vein', [[0.68, 0.3, -0.05], [0.9, 0.28, -0.1], [1.05, 0.22, -0.12]], .09, matPV, {
-  id: 'pv',
-  name: 'الوريد الرئوي الأيمن السفلي',
-  desc: 'يحمل الدم المؤكسج من الفص السفلي الأيمن للرئة إلى الأذين الأيسر.'
-});
-
-tube('Left Superior Pulmonary Vein', [[0.28, 0.55, -0.15], [0.05, 0.55, -0.2], [-0.15, 0.5, -0.2]], .09, matPV, {
-  id: 'pv',
-  name: 'الوريد الرئوي الأيسر العلوي',
-  desc: 'يحمل الدم المؤكسج من الفص العلوي الأيسر للرئة إلى الأذين الأيسر.'
-});
-
-tube('Left Inferior Pulmonary Vein', [[0.28, 0.3, -0.15], [0.05, 0.28, -0.2], [-0.15, 0.22, -0.2]], .09, matPV, {
-  id: 'pv',
-  name: 'الوريد الرئوي الأيسر السفلي',
-  desc: 'يحمل الدم المؤكسج من الفص السفلي الأيسر للرئة إلى الأذين الأيسر.'
-});
-
-// --- الشرايين التاجية ---
-tube('Left Anterior Descending (LAD)', [[0.0, 0.6, 0.4], [0.0, 0.2, 0.58], [-0.1, -0.3, 0.6], [-0.25, -0.7, 0.5], [-0.3, -1.0, 0.35]], .04, matCoronary, {
-  id: 'coronary',
-  name: 'الشريان الأمامي البيني (LAD)',
-  desc: 'فرع من الشريان التاجي الأيسر. يمر في الأخدود الأمامي البيني (Anterior interventricular groove). يغذي الجدار الأمامي للبطينين والحاجز. يُسمى "شريان الموت" (Widow-maker) لأن انسداده يسبب احتشاء واسع النطاق في البطين الأيسر.'
-});
-
-tube('Left Circumflex (LCx)', [[0.0, 0.6, 0.4], [0.4, 0.55, 0.4], [0.7, 0.35, 0.3], [0.8, 0.0, 0.15]], .035, matCoronary, {
-  id: 'coronary',
-  name: 'الشريان المحيطي الأيسر (LCx)',
-  desc: 'فرع من الشريان التاجي الأيسر. يمر في الأخدود التاجي الأيسر. يغذي الجدار الجانبي للبطين الأيسر والأذين الأيسر. انسداده يسبب احتشاء الجدار الجانبي.'
-});
-
-tube('Right Coronary Artery (RCA)', [[-0.2, 0.6, 0.35], [-0.5, 0.5, 0.4], [-0.75, 0.2, 0.35], [-0.8, -0.2, 0.2]], .04, matCoronary, {
-  id: 'coronary',
-  name: 'الشريان التاجي الأيمن (RCA)',
-  desc: 'ينشأ من الجيب الأبهر الأيمن. يمر في الأخدود التاجي الأيمن. يغذي الأذين الأيمن، البطين الأيمن، العقدة الجيبية (في 60% من الناس)، والعقدة الأذينية البطينية (في 80%). انسداده يسبب احتشاء الجدار السفلي واضطرابات نظم القلب.'
-});
-
-tube('Coronary Sinus', [[0.15, -0.3, -0.3], [-0.1, -0.1, -0.35], [-0.3, 0.15, -0.3], [-0.45, 0.3, -0.2]], .06, matVC, {
-  id: 'coronary',
-  name: 'الجيب التاجي (Coronary Sinus)',
-  desc: 'يجمع الدم الوريدي من عضلة القلب عبر الأوردة القلبية الكبرى والوسطى والصغرى. يصب في الأذين الأيمن. يستخدم في جراحة القلب لإدخال قسطرة تنظيم النظم.'
-});
-
-// ============ أرضية وظل ============
-const floor = new THREE.Mesh(new THREE.CircleGeometry(2.5, 64), new THREE.MeshBasicMaterial({color:0x0c2948, transparent:true, opacity:.55}));
-floor.rotation.x = -Math.PI/2;
-floor.position.y = -1.65;
-scene.add(floor);
-const grid = new THREE.GridHelper(7, 28, 0x1c4772, 0x102d50);
-grid.position.y = -1.67;
-scene.add(grid);
-
-// ============ التفاعل (Raycaster) ============
-const raycaster = new THREE.Raycaster(), pointer = new THREE.Vector2();
-let picked = null, hovered = null;
-
-renderer.domElement.addEventListener('pointermove', e => {
-  pointer.x = (e.clientX/innerWidth)*2 - 1;
-  pointer.y = -(e.clientY/innerHeight)*2 + 1;
-  raycaster.setFromCamera(pointer, camera);
-  const hits = raycaster.intersectObjects(heart.children, true);
-
-  if (hovered && (!hits.length || hits[0].object !== hovered)) {
-    if (hovered !== picked) hovered.material.emissive.setHex(0x000000);
-    hovered = null;
-    renderer.domElement.style.cursor = 'grab';
-  }
-  if (hits.length) {
-    const obj = hits[0].object;
-    if (obj !== hovered) {
-      hovered = obj;
-      if (obj !== picked) obj.material.emissive.setHex(0x223355);
-      renderer.domElement.style.cursor = 'pointer';
-    }
-  }
-});
-
-renderer.domElement.addEventListener('pointerdown', e => {
-  pointer.x = (e.clientX/innerWidth)*2 - 1;
-  pointer.y = -(e.clientY/innerHeight)*2 + 1;
-  raycaster.setFromCamera(pointer, camera);
-  const hits = raycaster.intersectObjects(heart.children, true);
-
-  if (picked) {
-    picked.material.emissive.setHex(0x000000);
-    picked.material.color.setHex(picked.userData.baseColor || 0xffffff);
-  }
-
-  if (hits.length) {
-    picked = hits[0].object;
-    picked.material.emissive.setHex(0x263a18);
-    picked.material.emissiveIntensity = 0.3;
-    if (picked.userData && picked.userData.name) {
-      document.querySelector('#partName').textContent = picked.userData.name;
-      document.querySelector('#desc').textContent = picked.userData.desc;
-    } else {
-      document.querySelector('#partName').textContent = picked.name;
-      document.querySelector('#desc').textContent = 'جزء من النموذج التوضيحي ثلاثي الأبعاد.';
-    }
-  }
-});
-
-// ============ الأزرار السفلية ============
-const info = {
-  rv: ['البطين الأيمن (Right Ventricle)', 'يستقبل الدم غير المؤكسج من الأذين الأيمن ويضخه إلى الرئتين عبر الشريان الرئوي. جداره أرق (3-5 ملم) لأن ضغط الرئتين منخفض.'],
-  lv: ['البطين الأيسر (Left Ventricle)', 'جداره سميك جداً (10-15 ملم) لضخ الدم المؤكسج إلى جميع أنحاء الجسم عبر الشريان الأبهر. يشكل قمة القلب.'],
-  ra: ['الأذين الأيمن (Right Atrium)', 'يستقبل الدم غير المؤكسج من الجسم عبر الوريد الأجوف العلوي والسفلي. يحتوي على العقدة الجيبية (منظم ضربات القلب).'],
-  la: ['الأذين الأيسر (Left Atrium)', 'يستقبل الدم المؤكسج من الرئتين عبر 4 أوردة رئوية، ويدفعه إلى البطين الأيسر عبر الصمام التاجي.'],
-  valves: ['الصمامات الأربعة (Heart Valves)', 'التاجي (Mitral): بين الأذين والبطين الأيسر. ثلاثي الشرفات (Tricuspid): بين الأذين والبطين الأيمن. الأبهر (Aortic): بين البطين الأيسر والأبهر. الرئوي (Pulmonary): بين البطين الأيمن والشريان الرئوي.'],
-  aorta: ['الشريان الأبهر (Aorta)', 'أكبر شريان في الجسم. يخرج من البطين الأيسر ويوزع الدم المؤكسج على كل الأعضاء. له قوس يعطي 3 فروع للرأس والذراعين.'],
-  pulmonary: ['الجذع الرئوي (Pulmonary Trunk)', 'ينقل الدم غير المؤكسج من البطين الأيمن إلى الرئتين. هو الشريان الوحيد الذي يحمل دماً غير مؤكسج.'],
-  coronary: ['الشرايين التاجية (Coronary Arteries)', 'تغذي عضلة القلب بالدم والأكسجين. اليسار يتفرع إلى LAD و LCx، والأيمن هو RCA. انسدادها يسبب الجلطة القلبية.']
-};
-
-document.querySelectorAll('[data-part]').forEach(b => {
-  b.onclick = () => {
-    const d = info[b.dataset.part];
-    if (d) {
-      document.querySelector('#partName').textContent = d[0];
-      document.querySelector('#desc').textContent = d[1];
-    }
+function spawnEnemy() {
+  // إنشاء جرثومة
+  const mesh = new THREE.Mesh(enemyGeo, enemyMat.clone());
+  // موقع عشوائي على حافة الشاشة (بعيداً عن المركز)
+  const angle = Math.random() * Math.PI * 2;
+  const radius = 12; // يبدأ من بعيد
+  mesh.position.set(
+    Math.cos(angle) * radius,
+    Math.sin(angle) * radius * 0.7,
+    (Math.random() - 0.5) * 2
+  );
+  mesh.userData = {
+    speed: 0.02 + Math.random() * 0.03, // سرعة عشوائية
+    active: true
   };
+  // إضافة تأثير وميض للجرثومة
+  mesh.userData.pulse = Math.random() * Math.PI * 2;
+  scene.add(mesh);
+  enemies.push(mesh);
+}
+
+// ==================== إعدادات اللعبة ====================
+let score = 0;
+let lives = 3;
+let isPlaying = false;
+let spawnTimer = 0;
+let gameSpeedMultiplier = 1;
+
+const scoreEl = document.getElementById('score');
+const livesEl = document.getElementById('lives');
+const startScreen = document.getElementById('start-screen');
+const endScreen = document.getElementById('end-screen');
+const finalScoreEl = document.getElementById('final-score');
+const endTitle = document.getElementById('end-title');
+const damageFlash = document.getElementById('damage-flash');
+
+// مؤثر اهتزاز الشاشة
+function shakeScreen() {
+  camera.position.x = (Math.random() - 0.5) * 0.5;
+  camera.position.y = (Math.random() - 0.5) * 0.5;
+  setTimeout(() => {
+    camera.position.x = 0;
+    camera.position.y = 0;
+  }, 100);
+}
+
+// وميض أحمر عند الضرر
+function triggerDamage() {
+  damageFlash.style.opacity = '1';
+  setTimeout(() => { damageFlash.style.opacity = '0'; }, 200);
+}
+
+// بدء اللعبة
+function startGame() {
+  score = 0;
+  lives = 3;
+  isPlaying = true;
+  gameSpeedMultiplier = 1;
+  scoreEl.textContent = score;
+  livesEl.textContent = lives;
+  startScreen.classList.add('hidden');
+  endScreen.classList.add('hidden');
+  
+  // إزالة أي جراثيم قديمة
+  enemies.forEach(e => scene.remove(e));
+  enemies.length = 0;
+}
+
+// إنهاء اللعبة
+function endGame(win = false) {
+  isPlaying = false;
+  finalScoreEl.textContent = score;
+  endTitle.textContent = win ? "أنقذت القلب!" : "انتهت اللعبة";
+  endScreen.classList.remove('hidden');
+}
+
+// ==================== التفاعل (النقر على الجراثيم) ====================
+const raycaster = new THREE.Raycaster();
+const mouse = new THREE.Vector2();
+
+renderer.domElement.addEventListener('pointerdown', (event) => {
+  if (!isPlaying) return;
+
+  // تحويل إحداثيات النقر إلى إحداثيات ثلاثية الأبعاد
+  mouse.x = (event.clientX / innerWidth) * 2 - 1;
+  mouse.y = -(event.clientY / innerHeight) * 2 + 1;
+
+  raycaster.setFromCamera(mouse, camera);
+  const intersects = raycaster.intersectObjects(enemies);
+
+  if (intersects.length > 0) {
+    const hitEnemy = intersects[0].object;
+    if (hitEnemy.userData.active) {
+      hitEnemy.userData.active = false;
+      scene.remove(hitEnemy);
+      // إزالة من المصفوفة
+      const idx = enemies.indexOf(hitEnemy);
+      if (idx > -1) enemies.splice(idx, 1);
+      
+      // زيادة النقاط
+      score += 10;
+      scoreEl.textContent = score;
+      
+      // تسريع اللعبة تدريجياً
+      if (score % 50 === 0) gameSpeedMultiplier += 0.2;
+    }
+  }
 });
 
-// ============ أزرار التحكم ============
-let spinning = false;
-document.querySelector('#rotate').onclick = () => spinning = !spinning;
+// ==================== حلقة اللعبة (الرسم والتحديث) ====================
+const clock = new THREE.Clock();
 
-document.querySelector('#reset').onclick = () => {
-  controls.reset();
-  camera.position.set(0, 1.1, 8.5);
-  controls.target.set(0, 0, 0);
-  heart.rotation.set(0, 0, 0);
-  if (picked) {
-    picked.material.emissive.setHex(0x000000);
-    picked = null;
-  }
-  document.querySelector('#partName').textContent = 'Heart · القلب';
-  document.querySelector('#desc').textContent = 'اسحب للتدوير • عجلة الماوس للتقريب • انقر على أي جزء لعرض تفاصيله التشريحية.';
-};
-
-// ============ حلقة الرسم ============
 function animate() {
   requestAnimationFrame(animate);
-  if (spinning) heart.rotation.y += .006;
-  controls.update();
+  const delta = clock.getDelta();
+  const time = clock.getElapsedTime();
+
+  // دوران القلب
+  heartGroup.rotation.y += 0.005;
+  heartGroup.rotation.x = Math.sin(time) * 0.1;
+
+  // نبض القلب
+  const pulse = 1 + Math.sin(time * 5) * 0.03;
+  heartMesh.scale.set(1 * pulse, 1.2 * pulse, 0.9 * pulse);
+
+  if (isPlaying) {
+    // توليد جراثيم جديدة
+    spawnTimer += delta;
+    const spawnRate = Math.max(0.3, 1 - (gameSpeedMultiplier * 0.1)); // كلما زادت السرعة، قل وقت التوليد
+    if (spawnTimer > spawnRate) {
+      spawnEnemy();
+      spawnTimer = 0;
+    }
+
+    // تحديث حركة الجراثيم
+    for (let i = enemies.length - 1; i >= 0; i--) {
+      const enemy = enemies[i];
+      if (!enemy.userData.active) continue;
+
+      // التحرك باتجاه المركز (0,0,0)
+      const direction = new THREE.Vector3(0, 0, 0).sub(enemy.position).normalize();
+      enemy.position.add(direction.multiplyScalar(enemy.userData.speed * gameSpeedMultiplier));
+
+      // نبض الجرثومة
+      enemy.userData.pulse += delta * 5;
+      const s = 1 + Math.sin(enemy.userData.pulse) * 0.2;
+      enemy.scale.set(s, s, s);
+
+      // التحقق من الوصول للقلب
+      if (enemy.position.length() < 2.0) {
+        // ضرر!
+        lives--;
+        livesEl.textContent = lives;
+        triggerDamage();
+        shakeScreen();
+        
+        scene.remove(enemy);
+        enemies.splice(i, 1);
+
+        if (lives <= 0) {
+          endGame(false);
+        }
+      }
+    }
+  }
+
   renderer.render(scene, camera);
 }
+
 animate();
 
+// استجابة الشاشة
 addEventListener('resize', () => {
-  camera.aspect = innerWidth/innerHeight;
+  camera.aspect = innerWidth / innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(innerWidth, innerHeight);
 });
-if (innerWidth < 600) document.body.classList.add('mobile');
+
+// أزرار التحكم
+document.getElementById('start-btn').addEventListener('click', startGame);
+document.getElementById('restart-btn').addEventListener('click', startGame);
+
 </script>
 </body>
 </html>
