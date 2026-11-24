@@ -1,65 +1,73 @@
-
 <!doctype html>
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>اقض على الجراثيم</title>
+<title>حامي القلب - Heart Defender</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, sans-serif; user-select: none; }
-  body { background: #050a14; color: #fff; overflow: hidden; }
+  body { background: #02050a; color: #fff; overflow: hidden; }
   canvas { display: block; position: fixed; inset: 0; }
 
   /* واجهة المستخدم */
   .hud { position: fixed; top: 20px; left: 20px; right: 20px; display: flex; justify-content: space-between; z-index: 10; pointer-events: none; }
-  .box { background: rgba(0,0,0,0.6); padding: 10px 20px; border-radius: 12px; font-size: 20px; font-weight: bold; border: 1px solid #333; }
+  .box { background: rgba(0,0,0,0.7); padding: 12px 24px; border-radius: 12px; font-size: 22px; font-weight: bold; border: 1px solid #1e3a5f; box-shadow: 0 0 15px rgba(0,0,0,0.5); }
   .score { color: #2ecc71; }
-  .lives { color: #e74c3c; font-size: 24px; letter-spacing: 3px; }
+  .level { color: #f1c40f; font-size: 18px; margin-top: 5px; display: block; }
+  .lives { color: #e74c3c; font-size: 26px; letter-spacing: 5px; }
 
   /* شاشات البداية والنهاية */
-  .overlay { position: fixed; inset: 0; background: rgba(5, 10, 20, 0.95); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 50; text-align: center; }
-  .overlay.hidden { display: none; }
-  .overlay h1 { font-size: 45px; color: #2ecc71; margin-bottom: 20px; text-shadow: 0 0 20px rgba(46, 204, 113, 0.5); }
-  .overlay p { font-size: 18px; color: #aaa; margin-bottom: 30px; max-width: 400px; line-height: 1.6; }
-  .overlay button { padding: 15px 50px; font-size: 22px; font-weight: bold; background: #2ecc71; color: #000; border: none; border-radius: 50px; cursor: pointer; transition: 0.2s; }
-  .overlay button:hover { transform: scale(1.1); background: #27ae60; }
+  .overlay { position: fixed; inset: 0; background: rgba(2, 5, 10, 0.95); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 50; text-align: center; transition: opacity 0.5s; }
+  .overlay.hidden { display: none; opacity: 0; }
+  .overlay h1 { font-size: 50px; margin-bottom: 20px; text-shadow: 0 0 30px rgba(255,255,255,0.2); }
+  .overlay p { font-size: 18px; color: #aaa; margin-bottom: 30px; max-width: 600px; line-height: 1.8; }
+  .overlay button { padding: 18px 60px; font-size: 24px; font-weight: bold; background: #2ecc71; color: #000; border: none; border-radius: 50px; cursor: pointer; transition: 0.3s; box-shadow: 0 0 20px rgba(46, 204, 113, 0.4); }
+  .overlay button:hover { transform: scale(1.1); background: #27ae60; box-shadow: 0 0 40px rgba(46, 204, 113, 0.8); }
 
   /* تأثير الضرر */
-  .damage-flash { position: fixed; inset: 0; background: rgba(231, 76, 60, 0.4); opacity: 0; pointer-events: none; z-index: 20; transition: opacity 0.1s; }
+  .damage-flash { position: fixed; inset: 0; background: rgba(231, 76, 60, 0.4); opacity: 0; pointer-events: none; z-index: 20; transition: opacity 0.15s; }
+  
+  /* شاشة التحميل */
+  #loading { background: #02050a; color: #fff; font-size: 20px; z-index: 100; }
 </style>
 </head>
 <body>
 
+<div id="loading" class="overlay">
+  <h1>جاري التحميل...</h1>
+</div>
+
+<div id="start-screen" class="overlay hidden">
+  <h1 style="color: #2ecc71;">حامي القلب 🛡️</h1>
+  <p>القلب في خطر! جراثيم فضائية تطير من حوله وتحاول اختراقه. انقر عليها بسرعة لتدميرها قبل أن تصل. كلما زادت النقاط، زادت السرعة والصعوبة. إذا وصلت إلى 200 نقطة، تفوز!</p>
+  <button id="start-btn">ابدأ المهمة</button>
+</div>
+
+<div id="end-screen" class="overlay hidden">
+  <h1 id="end-title" style="color: #e74c3c;">انتهت اللعبة</h1>
+  <p id="end-message">لقد استنفدت كل محاولاتك.</p>
+  <p>نقاطك النهائية: <span id="final-score" style="color: #2ecc71; font-size: 30px; font-weight: bold;">0</span></p>
+  <button id="restart-btn" style="background: #3498db; color: white;">العب مرة أخرى</button>
+</div>
+
 <div class="hud">
-  <div class="box score">النقاط: <span id="score">0</span></div>
-  <div class="box lives">❤️ <span id="lives">3</span></div>
+  <div class="box score">النقاط: <span id="score">0</span><span class="level">المستوى: <span id="level">1</span></span></div>
+  <div class="box lives" id="lives-display">❤️❤️❤️</div>
 </div>
 
 <div id="damage-flash" class="damage-flash"></div>
 
-<div id="start-screen" class="overlay">
-  <h1>اقض على الجراثيم! 🦠</h1>
-  <p>القلب في خطر! جراثيم تطير من حوله. انقر عليها بسرعة لتدميرها قبل أن تصل إلى القلب. لديك 3 محاولات فقط!</p>
-  <button id="start-btn">ابدأ اللعب</button>
-</div>
-
-<div id="end-screen" class="overlay hidden">
-  <h1 id="end-title">انتهت اللعبة</h1>
-  <p>نقاطك النهائية: <span id="final-score" style="color:#2ecc71; font-size: 24px; font-weight:bold;">0</span></p>
-  <button id="restart-btn">العب مرة أخرى</button>
-</div>
-
 <script type="module">
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
-import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/controls/OrbitControls.js';
 
 // ==================== إعداد المشهد ====================
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x050a14);
-scene.fog = new THREE.Fog(0x050a14, 10, 30);
+scene.background = new THREE.Color(0x02050a);
+scene.fog = new THREE.Fog(0x02050a, 15, 40);
 
 const camera = new THREE.PerspectiveCamera(50, innerWidth / innerHeight, 0.1, 100);
-camera.position.set(0, 0, 10);
+camera.position.set(0, 0, 12);
+camera.lookAt(0, 0, 0);
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(innerWidth, innerHeight);
@@ -67,49 +75,99 @@ renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 document.body.appendChild(renderer.domElement);
 
 // إضاءة
-scene.add(new THREE.AmbientLight(0xffffff, 0.6));
-const pointLight = new THREE.PointLight(0xffffff, 1.5, 20);
+scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+const pointLight = new THREE.PointLight(0xff6666, 2, 25);
 pointLight.position.set(0, 0, 5);
 scene.add(pointLight);
+const backLight = new THREE.PointLight(0x0066ff, 1, 30);
+backLight.position.set(-5, -5, -10);
+scene.add(backLight);
 
-// ==================== بناء القلب (مجسم مركزي) ====================
+// ==================== بناء القلب ====================
 const heartGroup = new THREE.Group();
 const heartMat = new THREE.MeshStandardMaterial({ color: 0xc0392b, roughness: 0.3, metalness: 0.2, emissive: 0x220000 });
-const heartGeo = new THREE.SphereGeometry(1.5, 32, 32);
+const heartGeo = new THREE.SphereGeometry(1.5, 64, 64);
 const heartMesh = new THREE.Mesh(heartGeo, heartMat);
 heartMesh.scale.set(1, 1.2, 0.9);
 heartGroup.add(heartMesh);
-scene.add(heartGroup);
 
 // هالة حول القلب
 const halo = new THREE.Mesh(
-  new THREE.SphereGeometry(1.7, 32, 32),
+  new THREE.SphereGeometry(1.8, 32, 32),
   new THREE.MeshBasicMaterial({ color: 0xff0000, transparent: true, opacity: 0.05, side: THREE.BackSide })
 );
 heartGroup.add(halo);
 
-// ==================== الجراثيم ====================
-const enemies = [];
-const enemyGeo = new THREE.SphereGeometry(0.35, 16, 16);
-const enemyMat = new THREE.MeshStandardMaterial({ color: 0x2ecc71, emissive: 0x115522, roughness: 0.2 });
+// تأثير توهج للقلب
+const glow = new THREE.Mesh(
+  new THREE.SphereGeometry(1.7, 32, 32),
+  new THREE.MeshBasicMaterial({ color: 0xff3333, transparent: true, opacity: 0.1, side: THREE.BackSide })
+);
+heartGroup.add(glow);
 
+scene.add(heartGroup);
+
+// ==================== خلفية فضائية (نجوم) ====================
+const starsGeo = new THREE.BufferGeometry();
+const starsCount = 1000;
+const starsPositions = new Float32Array(starsCount * 3);
+for (let i = 0; i < starsCount * 3; i += 3) {
+  starsPositions[i] = (Math.random() - 0.5) * 100;
+  starsPositions[i+1] = (Math.random() - 0.5) * 100;
+  starsPositions[i+2] = (Math.random() - 0.5) * 100 - 20; // في الخلف
+}
+starsGeo.setAttribute('position', new THREE.BufferAttribute(starsPositions, 3));
+const starsMat = new THREE.PointsMaterial({ color: 0xffffff, size: 0.15, transparent: true, opacity: 0.8 });
+const stars = new THREE.Points(starsGeo, starsMat);
+scene.add(stars);
+
+// ==================== إدارة الجراثيم والانفجارات ====================
+const enemies = [];
+const explosions = [];
+const enemyGeo = new THREE.SphereGeometry(0.4, 16, 16);
+const enemyMatBase = new THREE.MeshStandardMaterial({ color: 0x2ecc71, emissive: 0x115522, roughness: 0.2 });
+
+// إنشاء انفجار
+function createExplosion(pos) {
+  const count = 10;
+  const particleGeo = new THREE.BufferGeometry();
+  const positions = new Float32Array(count * 3);
+  const velocities = [];
+  
+  for (let i = 0; i < count; i++) {
+    positions[i*3] = pos.x;
+    positions[i*3+1] = pos.y;
+    positions[i*3+2] = pos.z;
+    velocities.push(new THREE.Vector3(
+      (Math.random() - 0.5) * 0.3,
+      (Math.random() - 0.5) * 0.3,
+      (Math.random() - 0.5) * 0.3
+    ));
+  }
+  
+  particleGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  const particleMat = new THREE.PointsMaterial({ color: 0x2ecc71, size: 0.2, transparent: true, opacity: 1 });
+  const particles = new THREE.Points(particleGeo, particleMat);
+  scene.add(particles);
+  
+  explosions.push({ particles, velocities, life: 1.0 });
+}
+
+// توليد جرثومة
 function spawnEnemy() {
-  // إنشاء جرثومة
-  const mesh = new THREE.Mesh(enemyGeo, enemyMat.clone());
-  // موقع عشوائي على حافة الشاشة (بعيداً عن المركز)
+  const mesh = new THREE.Mesh(enemyGeo, enemyMatBase.clone());
+  // موقع عشوائي على حافة الشاشة
   const angle = Math.random() * Math.PI * 2;
-  const radius = 12; // يبدأ من بعيد
-  mesh.position.set(
-    Math.cos(angle) * radius,
-    Math.sin(angle) * radius * 0.7,
-    (Math.random() - 0.5) * 2
-  );
+  const radius = 14;
+  mesh.position.set(Math.cos(angle) * radius, Math.sin(angle) * radius, (Math.random() - 0.5) * 3);
+  
   mesh.userData = {
-    speed: 0.02 + Math.random() * 0.03, // سرعة عشوائية
-    active: true
+    speed: 0.03 + Math.random() * 0.02,
+    active: true,
+    pulse: Math.random() * Math.PI * 2,
+    baseScale: 0.8 + Math.random() * 0.4
   };
-  // إضافة تأثير وميض للجرثومة
-  mesh.userData.pulse = Math.random() * Math.PI * 2;
+  mesh.scale.setScalar(mesh.userData.baseScale);
   scene.add(mesh);
   enemies.push(mesh);
 }
@@ -117,55 +175,86 @@ function spawnEnemy() {
 // ==================== إعدادات اللعبة ====================
 let score = 0;
 let lives = 3;
+let level = 1;
 let isPlaying = false;
 let spawnTimer = 0;
 let gameSpeedMultiplier = 1;
+const WIN_SCORE = 200;
 
 const scoreEl = document.getElementById('score');
-const livesEl = document.getElementById('lives');
+const levelEl = document.getElementById('level');
+const livesDisplay = document.getElementById('lives-display');
 const startScreen = document.getElementById('start-screen');
 const endScreen = document.getElementById('end-screen');
 const finalScoreEl = document.getElementById('final-score');
 const endTitle = document.getElementById('end-title');
+const endMessage = document.getElementById('end-message');
 const damageFlash = document.getElementById('damage-flash');
+const loading = document.getElementById('loading');
 
 // مؤثر اهتزاز الشاشة
 function shakeScreen() {
-  camera.position.x = (Math.random() - 0.5) * 0.5;
-  camera.position.y = (Math.random() - 0.5) * 0.5;
+  const originalX = camera.position.x;
+  const originalY = camera.position.y;
+  camera.position.x += (Math.random() - 0.5) * 0.6;
+  camera.position.y += (Math.random() - 0.5) * 0.6;
   setTimeout(() => {
-    camera.position.x = 0;
-    camera.position.y = 0;
+    camera.position.x = originalX;
+    camera.position.y = originalY;
   }, 100);
 }
 
 // وميض أحمر عند الضرر
 function triggerDamage() {
   damageFlash.style.opacity = '1';
-  setTimeout(() => { damageFlash.style.opacity = '0'; }, 200);
+  setTimeout(() => { damageFlash.style.opacity = '0'; }, 150);
+}
+
+// تحديث واجهة الأرواح
+function updateLivesDisplay() {
+  let hearts = '';
+  for (let i = 0; i < lives; i++) hearts += '❤️';
+  for (let i = lives; i < 3; i++) hearts += '🖤';
+  livesDisplay.innerHTML = hearts;
 }
 
 // بدء اللعبة
 function startGame() {
   score = 0;
   lives = 3;
-  isPlaying = true;
+  level = 1;
   gameSpeedMultiplier = 1;
+  isPlaying = true;
+  
   scoreEl.textContent = score;
-  livesEl.textContent = lives;
+  levelEl.textContent = level;
+  updateLivesDisplay();
+  
   startScreen.classList.add('hidden');
   endScreen.classList.add('hidden');
   
-  // إزالة أي جراثيم قديمة
+  // إزالة الجراثيم القديمة
   enemies.forEach(e => scene.remove(e));
   enemies.length = 0;
+  explosions.forEach(e => scene.remove(e.particles));
+  explosions.length = 0;
 }
 
 // إنهاء اللعبة
-function endGame(win = false) {
+function endGame(isVictory) {
   isPlaying = false;
   finalScoreEl.textContent = score;
-  endTitle.textContent = win ? "أنقذت القلب!" : "انتهت اللعبة";
+  
+  if (isVictory) {
+    endTitle.textContent = "أنقذت القلب! 🎉";
+    endTitle.style.color = "#2ecc71";
+    endMessage.textContent = "لقد دمرت كل الجراثيم وحميت القلب. أنت بطل!";
+  } else {
+    endTitle.textContent = "انتهت اللعبة 💔";
+    endTitle.style.color = "#e74c3c";
+    endMessage.textContent = "وصلت الجراثيم إلى القلب. حاول مرة أخرى!";
+  }
+  
   endScreen.classList.remove('hidden');
 }
 
@@ -176,7 +265,6 @@ const mouse = new THREE.Vector2();
 renderer.domElement.addEventListener('pointerdown', (event) => {
   if (!isPlaying) return;
 
-  // تحويل إحداثيات النقر إلى إحداثيات ثلاثية الأبعاد
   mouse.x = (event.clientX / innerWidth) * 2 - 1;
   mouse.y = -(event.clientY / innerHeight) * 2 + 1;
 
@@ -187,22 +275,32 @@ renderer.domElement.addEventListener('pointerdown', (event) => {
     const hitEnemy = intersects[0].object;
     if (hitEnemy.userData.active) {
       hitEnemy.userData.active = false;
+      createExplosion(hitEnemy.position.clone());
       scene.remove(hitEnemy);
-      // إزالة من المصفوفة
+      
       const idx = enemies.indexOf(hitEnemy);
       if (idx > -1) enemies.splice(idx, 1);
       
-      // زيادة النقاط
       score += 10;
       scoreEl.textContent = score;
       
-      // تسريع اللعبة تدريجياً
-      if (score % 50 === 0) gameSpeedMultiplier += 0.2;
+      // ترقية المستوى
+      const newLevel = Math.floor(score / 50) + 1;
+      if (newLevel > level) {
+        level = newLevel;
+        levelEl.textContent = level;
+        gameSpeedMultiplier += 0.2;
+      }
+      
+      // التحقق من الفوز
+      if (score >= WIN_SCORE) {
+        endGame(true);
+      }
     }
   }
 });
 
-// ==================== حلقة اللعبة (الرسم والتحديث) ====================
+// ==================== حلقة اللعبة ====================
 const clock = new THREE.Clock();
 
 function animate() {
@@ -210,18 +308,38 @@ function animate() {
   const delta = clock.getDelta();
   const time = clock.getElapsedTime();
 
-  // دوران القلب
-  heartGroup.rotation.y += 0.005;
-  heartGroup.rotation.x = Math.sin(time) * 0.1;
+  // تحديث النجوم
+  stars.rotation.y += 0.0002;
+  stars.rotation.x += 0.0001;
 
   // نبض القلب
-  const pulse = 1 + Math.sin(time * 5) * 0.03;
+  const pulse = 1 + Math.sin(time * 4) * 0.05;
   heartMesh.scale.set(1 * pulse, 1.2 * pulse, 0.9 * pulse);
+  heartGroup.rotation.y += 0.005;
+
+  // تحديث الانفجارات
+  for (let i = explosions.length - 1; i >= 0; i--) {
+    const exp = explosions[i];
+    const positions = exp.particles.geometry.attributes.position.array;
+    for (let j = 0; j < exp.velocities.length; j++) {
+      positions[j*3] += exp.velocities[j].x;
+      positions[j*3+1] += exp.velocities[j].y;
+      positions[j*3+2] += exp.velocities[j].z;
+    }
+    exp.particles.geometry.attributes.position.needsUpdate = true;
+    exp.particles.material.opacity -= 0.02;
+    exp.life -= 0.02;
+    
+    if (exp.life <= 0) {
+      scene.remove(exp.particles);
+      explosions.splice(i, 1);
+    }
+  }
 
   if (isPlaying) {
-    // توليد جراثيم جديدة
+    // توليد الجراثيم
     spawnTimer += delta;
-    const spawnRate = Math.max(0.3, 1 - (gameSpeedMultiplier * 0.1)); // كلما زادت السرعة، قل وقت التوليد
+    const spawnRate = Math.max(0.4, 1.2 - (level * 0.1));
     if (spawnTimer > spawnRate) {
       spawnEnemy();
       spawnTimer = 0;
@@ -232,23 +350,22 @@ function animate() {
       const enemy = enemies[i];
       if (!enemy.userData.active) continue;
 
-      // التحرك باتجاه المركز (0,0,0)
       const direction = new THREE.Vector3(0, 0, 0).sub(enemy.position).normalize();
       enemy.position.add(direction.multiplyScalar(enemy.userData.speed * gameSpeedMultiplier));
 
       // نبض الجرثومة
       enemy.userData.pulse += delta * 5;
-      const s = 1 + Math.sin(enemy.userData.pulse) * 0.2;
-      enemy.scale.set(s, s, s);
+      const s = enemy.userData.baseScale * (1 + Math.sin(enemy.userData.pulse) * 0.2);
+      enemy.scale.setScalar(s);
 
       // التحقق من الوصول للقلب
       if (enemy.position.length() < 2.0) {
-        // ضرر!
         lives--;
-        livesEl.textContent = lives;
+        updateLivesDisplay();
         triggerDamage();
         shakeScreen();
         
+        createExplosion(enemy.position.clone());
         scene.remove(enemy);
         enemies.splice(i, 1);
 
@@ -262,8 +379,6 @@ function animate() {
   renderer.render(scene, camera);
 }
 
-animate();
-
 // استجابة الشاشة
 addEventListener('resize', () => {
   camera.aspect = innerWidth / innerHeight;
@@ -274,6 +389,13 @@ addEventListener('resize', () => {
 // أزرار التحكم
 document.getElementById('start-btn').addEventListener('click', startGame);
 document.getElementById('restart-btn').addEventListener('click', startGame);
+
+// تشغيل اللعبة بعد التحميل
+setTimeout(() => {
+  loading.classList.add('hidden');
+  startScreen.classList.remove('hidden');
+  animate();
+}, 500);
 
 </script>
 </body>
