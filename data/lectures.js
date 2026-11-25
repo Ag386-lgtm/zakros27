@@ -29,3 +29,11 @@ const LECTURES = [
   //   en: '...'
   // },
 ];
+{
+  id: 'lecture-02',
+  group: 'Psychiatric Theories',
+  groupAr: 'النظريات النفسية',
+  num: '02',
+  title: 'النظريات النفسية',
+  en: 'Psychiatric Theories'
+}
